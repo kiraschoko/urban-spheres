@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, animate } from 'motion/react';
 import { Activity } from 'lucide-react';
 
 // --- Constants & Types ---
@@ -111,11 +111,11 @@ const getTokyoFlow = (hour: number): number => {
 
 // --- 3D Projection Utility ---
 
-const project = (x: number, y: number, z: number, sphereR: number, width: number, height: number, focalLength: number = 400) => {
+const project = (x: number, y: number, z: number, sphereR: number, width: number, height: number, cy: number, focalLength: number = 400) => {
   const scale = focalLength / (focalLength + z);
   return {
     x: width / 2 + x * scale * sphereR,
-    y: height / 2 + y * scale * sphereR,
+    y: cy + y * scale * sphereR,
     scale,
     alpha: Math.max(0, (focalLength - z) / (focalLength * 1.5)) // Simple depth alpha
   };
@@ -174,9 +174,11 @@ const TokyoSystem = ({ intensity, localTime }: { intensity: number, localTime: n
       ctx.fillStyle = BG_COLOR;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+      const isMobile = window.innerWidth < 768;
+      const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
       const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
-      const sphereR = Math.min(cx, cy) * 0.7;
+      const cy = isMobile ? canvas.height * 0.46 : (isTablet ? canvas.height * 0.45 : canvas.height * 0.44);
+      const sphereR = Math.min(cx, cy) * (isMobile ? 0.85 : (isTablet ? 0.65 : 0.7));
       const t = time * 0.001;
 
       // Commuting Flow Logic
@@ -212,7 +214,7 @@ const TokyoSystem = ({ intensity, localTime }: { intensity: number, localTime: n
         const rx = x * Math.cos(globalRot) - z * Math.sin(globalRot);
         const rz = x * Math.sin(globalRot) + z * Math.cos(globalRot);
 
-        const proj = project(rx, y, rz, sphereR, canvas.width, canvas.height);
+        const proj = project(rx, y, rz, sphereR, canvas.width, canvas.height, cy);
         
         return {
           ...proj,
@@ -258,12 +260,14 @@ const TokyoSystem = ({ intensity, localTime }: { intensity: number, localTime: n
   }, [intensity, localTime]);
 
   return (
-    <div className="relative w-full h-full flex flex-col items-center justify-end pb-32">
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
-      <div className="relative z-10 text-center pointer-events-none">
-        <h2 className="text-[9px] tracking-[0.5em] uppercase text-white/30 mb-1">Commuting System</h2>
+    <div className="relative w-full min-h-[80vh] md:h-full flex flex-col items-center justify-center md:justify-center lg:justify-end py-20 md:py-0 md:pb-0 lg:pb-40">
+      <div className="relative w-full aspect-square max-w-[400px] md:max-w-[300px] lg:max-w-none md:relative lg:absolute lg:inset-0 lg:aspect-auto">
+        <canvas ref={canvasRef} className="w-full h-full" />
+      </div>
+      <div className="relative z-10 flex flex-col items-center gap-3 md:gap-1 lg:gap-3 text-center pointer-events-none -mt-10 md:mt-0 lg:mt-0">
+        <h2 className="text-[9px] tracking-[0.5em] uppercase text-white/50">Commuting System</h2>
         <div className="text-xl font-light tracking-widest text-white/80">{TOKYO_CONFIG.name}</div>
-        <div className="text-[10px] font-mono text-white mt-2">{formatTime(localTime)}</div>
+        <div className="text-[10px] font-mono text-white/90">{formatTime(localTime)}</div>
       </div>
     </div>
   );
@@ -347,9 +351,11 @@ const SaoPauloSystem = ({ intensity, localTime, isLive }: { intensity: number, l
       ctx.fillStyle = BG_COLOR;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+      const isMobile = window.innerWidth < 768;
+      const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
       const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
-      const sphereR = Math.min(cx, cy) * 0.75;
+      const cy = isMobile ? canvas.height * 0.46 : (isTablet ? canvas.height * 0.45 : canvas.height * 0.44);
+      const sphereR = Math.min(cx, cy) * (isMobile ? 0.9 : (isTablet ? 0.7 : 0.75));
 
       // Use refs to avoid re-triggering the effect on slider move
       const { intensity: curIntensity, localTime: curLocalTime } = paramsRef.current;
@@ -422,7 +428,7 @@ const SaoPauloSystem = ({ intensity, localTime, isLive }: { intensity: number, l
         const d2 = Math.sin(p.z * 2.6 - dShift) * Math.cos(p.x * 1.6 + p.noiseOffset * 0.02);
         const density = (d1 + d2 + 2) / 4; 
 
-        const proj = project(curX, curY, curZ, sphereR, canvas.width, canvas.height);
+        const proj = project(curX, curY, curZ, sphereR, canvas.width, canvas.height, cy);
         
         const flicker = 0.85 + Math.sin(t * 8 + p.noiseOffset) * 0.15;
         const alpha = proj.alpha * brightness * flicker * ( (1 - densityStrength) + density * densityStrength ) * (0.6 + curIntensity * 0.4);
@@ -453,12 +459,14 @@ const SaoPauloSystem = ({ intensity, localTime, isLive }: { intensity: number, l
   }, []); // Empty dependency array: render loop runs independently of React state updates
 
   return (
-    <div className="relative w-full h-full flex flex-col items-center justify-end pb-32">
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
-      <div className="relative z-10 text-center pointer-events-none">
-        <h2 className="text-[9px] tracking-[0.5em] uppercase text-white/30 mb-1">{SAO_PAULO_CONFIG.label}</h2>
+    <div className="relative w-full min-h-[80vh] md:h-full flex flex-col items-center justify-center md:justify-center lg:justify-end py-20 md:py-0 md:pb-0 lg:pb-40">
+      <div className="relative w-full aspect-square max-w-[400px] md:max-w-[300px] lg:max-w-none md:relative lg:absolute lg:inset-0 lg:aspect-auto">
+        <canvas ref={canvasRef} className="w-full h-full" />
+      </div>
+      <div className="relative z-10 flex flex-col items-center gap-3 md:gap-1 lg:gap-3 text-center pointer-events-none -mt-10 md:mt-0 lg:mt-0">
+        <h2 className="text-[9px] tracking-[0.5em] uppercase text-white/50">{SAO_PAULO_CONFIG.label}</h2>
         <div className="text-xl font-light tracking-widest text-white/80">{SAO_PAULO_CONFIG.name}</div>
-        <div className="text-[10px] font-mono text-white mt-2">{formatTime(localTime)}</div>
+        <div className="text-[10px] font-mono text-white/90">{formatTime(localTime)}</div>
       </div>
     </div>
   );
@@ -569,9 +577,11 @@ const BerlinSystem = ({ intensity: globalIntensity, localTime }: { intensity: nu
       ctx.fillStyle = BG_COLOR;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+      const isMobile = window.innerWidth < 768;
+      const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
       const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
-      const sphereR = Math.min(cx, cy) * 0.8;
+      const cy = isMobile ? canvas.height * 0.46 : (isTablet ? canvas.height * 0.45 : canvas.height * 0.44);
+      const sphereR = Math.min(cx, cy) * (isMobile ? 0.95 : (isTablet ? 0.75 : 0.8));
       const t = time * 0.001;
       
       let hour = localTime % 24;
@@ -656,7 +666,7 @@ const BerlinSystem = ({ intensity: globalIntensity, localTime }: { intensity: nu
         const rx = p.x * Math.cos(rot) - p.z * Math.sin(rot);
         const rz = p.x * Math.sin(rot) + p.z * Math.cos(rot);
 
-        const proj = project(rx, p.y, rz, sphereR, canvas.width, canvas.height);
+        const proj = project(rx, p.y, rz, sphereR, canvas.width, canvas.height, cy);
         
         // Flicker and depth-based alpha
         const flicker = 0.9 + Math.sin(t * 4 + p.noiseOffset) * 0.1;
@@ -687,12 +697,14 @@ const BerlinSystem = ({ intensity: globalIntensity, localTime }: { intensity: nu
   }, [globalIntensity, localTime]);
 
   return (
-    <div className="relative w-full h-full flex flex-col items-center justify-end pb-32">
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
-      <div className="relative z-10 text-center pointer-events-none">
-        <h2 className="text-[9px] tracking-[0.5em] uppercase text-white/30 mb-1">{BERLIN_CONFIG.label}</h2>
+    <div className="relative w-full min-h-[80vh] md:h-full flex flex-col items-center justify-center md:justify-center lg:justify-end py-20 md:py-0 md:pb-0 lg:pb-40">
+      <div className="relative w-full aspect-square max-w-[400px] md:max-w-[300px] lg:max-w-none md:relative lg:absolute lg:inset-0 lg:aspect-auto">
+        <canvas ref={canvasRef} className="w-full h-full" />
+      </div>
+      <div className="relative z-10 flex flex-col items-center gap-3 md:gap-1 lg:gap-3 text-center pointer-events-none -mt-10 md:mt-0 lg:mt-0">
+        <h2 className="text-[9px] tracking-[0.5em] uppercase text-white/50">{BERLIN_CONFIG.label}</h2>
         <div className="text-xl font-light tracking-widest text-white/80">{BERLIN_CONFIG.name}</div>
-        <div className="text-[10px] font-mono text-white mt-2">{formatTime(localTime)}</div>
+        <div className="text-[10px] font-mono text-white/90">{formatTime(localTime)}</div>
       </div>
     </div>
   );
@@ -700,10 +712,24 @@ const BerlinSystem = ({ intensity: globalIntensity, localTime }: { intensity: nu
 
 // --- Slider Handle with Internal Particles ---
 
-const SliderHandle = ({ progress, isHovered, isDragging }: { progress: number, isHovered: boolean, isDragging: boolean }) => {
+const SliderHandle = ({ 
+  progress, 
+  isHovered, 
+  isDragging, 
+  isLive, 
+  isTransitioning, 
+  isArrived 
+}: { 
+  progress: number, 
+  isHovered: boolean, 
+  isDragging: boolean, 
+  isLive: boolean,
+  isTransitioning: boolean,
+  isArrived: boolean
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particles = useRef<{x: number, y: number, vx: number, vy: number, alpha: number, targetAlpha: number}[]>([]);
-  const requestRef = useRef<number>();
+  const requestRef = useRef<number>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -724,11 +750,11 @@ const SliderHandle = ({ progress, isHovered, isDragging }: { progress: number, i
       }
     }
 
-    const animate = () => {
+    const animateParticles = () => {
       ctx.clearRect(0, 0, 40, 40);
       
-      const activity = isDragging ? 2.4 : (isHovered ? 1.7 : 1.0);
-      const baseAlpha = isHovered || isDragging ? 0.9 : 0.6;
+      const activity = isDragging || isTransitioning ? 2.4 : (isHovered ? 1.7 : 1.0);
+      const baseAlpha = isHovered || isDragging || isLive || isTransitioning || isArrived ? 0.9 : 0.6;
 
       for (const p of particles.current) {
         p.x += p.vx * activity;
@@ -750,23 +776,43 @@ const SliderHandle = ({ progress, isHovered, isDragging }: { progress: number, i
         ctx.fill();
       }
 
-      requestRef.current = requestAnimationFrame(animate);
+      requestRef.current = requestAnimationFrame(animateParticles);
     };
 
-    requestRef.current = requestAnimationFrame(animate);
+    requestRef.current = requestAnimationFrame(animateParticles);
     return () => { if (requestRef.current) cancelAnimationFrame(requestRef.current); };
-  }, [isHovered, isDragging]);
+  }, [isHovered, isDragging, isLive, isTransitioning, isArrived]);
 
   return (
     <motion.div 
-      className="absolute w-6 h-6 rounded-full border border-white/20 bg-black/60 backdrop-blur-md pointer-events-none flex items-center justify-center overflow-hidden shadow-[0_0_20px_rgba(255,255,255,0.03)]"
+      className="absolute w-6 h-6 rounded-full border border-white/20 bg-black/60 backdrop-blur-md pointer-events-none flex items-center justify-center overflow-hidden"
       style={{ left: `${progress * 100}%`, x: '-50%' }}
       animate={{
-        scale: isDragging ? 1.15 : (isHovered ? 1.08 : 1),
-        borderColor: isHovered || isDragging ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.2)'
+        scale: isDragging ? 1.15 : (isArrived ? [1, 1.15, 1] : (isHovered ? 1.08 : (isLive || isTransitioning ? [1, 1.03, 1] : 1))),
+        borderColor: isHovered || isDragging || isLive || isTransitioning || isArrived ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.2)',
+        boxShadow: isArrived 
+          ? ['0 0 20px rgba(255,255,255,0.1)', '0 0 40px rgba(255,255,255,0.4)', '0 0 20px rgba(255,255,255,0.1)']
+          : (isTransitioning 
+              ? '0 0 30px rgba(255,255,255,0.25)' 
+              : (isLive 
+                  ? ['0 0 15px rgba(255,255,255,0.05)', '0 0 25px rgba(255,255,255,0.15)', '0 0 15px rgba(255,255,255,0.05)']
+                  : '0 0 20px rgba(255,255,255,0.03)'))
       }}
-      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+      transition={{ 
+        scale: (!isDragging && (isArrived || (!isHovered && (isLive || isTransitioning))))
+          ? { duration: isArrived ? 0.6 : (isTransitioning ? 0.4 : 4), repeat: isArrived ? 0 : Infinity, ease: "easeInOut" }
+          : { type: 'spring', stiffness: 300, damping: 25 },
+        boxShadow: (isLive || isArrived) ? { duration: isArrived ? 0.6 : 4, repeat: isArrived ? 0 : Infinity, ease: "easeInOut" } : { duration: 0.3 },
+        borderColor: { duration: 0.3 }
+      }}
     >
+      {isTransitioning && (
+        <motion.div 
+          className="absolute inset-0 bg-white/10 blur-sm"
+          animate={{ opacity: [0, 0.4, 0] }}
+          transition={{ duration: 0.5, repeat: Infinity }}
+        />
+      )}
       <canvas ref={canvasRef} width={40} height={40} className="w-full h-full opacity-90" />
       <div className="absolute inset-0 rounded-full shadow-[inset_0_0_10px_rgba(255,255,255,0.1)] pointer-events-none" />
     </motion.div>
@@ -783,15 +829,73 @@ export default function App() {
   const [isLive, setIsLive] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isArrived, setIsArrived] = useState(false);
+  
+  const animationRef = useRef<any>(null);
+  const syncRef = useRef<number | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    if (!isLive) return;
-    const timer = setInterval(() => {
+  const cleanup = () => {
+    if (animationRef.current) {
+      animationRef.current.stop();
+      animationRef.current = null;
+    }
+    if (syncRef.current) {
+      cancelAnimationFrame(syncRef.current);
+      syncRef.current = null;
+    }
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setIsLive(false);
+    setIsTransitioning(false);
+    setIsArrived(false);
+  };
+
+  const startLiveSync = () => {
+    cleanup();
+    setIsLive(true);
+    const update = () => {
       const now = new Date();
-      setGlobalTime(now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [isLive]);
+      setGlobalTime(now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600 + now.getUTCMilliseconds() / 3600000);
+      syncRef.current = requestAnimationFrame(update);
+    };
+    syncRef.current = requestAnimationFrame(update);
+  };
+
+  const handleLiveNow = () => {
+    cleanup();
+    
+    const now = new Date();
+    const targetTime = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600 + now.getUTCMilliseconds() / 3600000;
+    
+    const diff = Math.abs(targetTime - globalTime);
+    const duration = Math.min(0.8, Math.max(0.6, diff / 12));
+    
+    setIsTransitioning(true);
+    animationRef.current = animate(globalTime, targetTime, {
+      duration,
+      ease: "easeOut",
+      onUpdate: (latest) => setGlobalTime(latest),
+      onComplete: () => {
+        animationRef.current = null;
+        setIsTransitioning(false);
+        setIsArrived(true);
+        timeoutRef.current = setTimeout(() => {
+          setIsArrived(false);
+          startLiveSync();
+        }, 600);
+      }
+    });
+  };
+
+  // Initial live sync
+  useEffect(() => {
+    startLiveSync();
+    return () => cleanup();
+  }, []);
 
   const tokyoLocalTime = getLocalTime(globalTime, TOKYO_CONFIG.timezone);
   const saoPauloLocalTime = getLocalTime(globalTime, SAO_PAULO_CONFIG.timezone);
@@ -802,29 +906,37 @@ export default function App() {
   const berlinIntensity = getActivityIntensity(berlinLocalTime);
 
   return (
-    <div className="min-h-screen bg-[#0b0b0c] text-white flex flex-col font-sans overflow-hidden">
+    <div className="min-h-screen bg-[#0b0b0c] text-white flex flex-col font-sans overflow-x-hidden overflow-y-auto lg:overflow-hidden">
       {/* Header */}
       <header className="fixed top-0 left-0 w-full p-8 flex justify-between items-center z-30 mix-blend-difference">
         <div className="flex flex-col">
-          <h1 className="text-xs tracking-[0.6em] font-light uppercase text-white/70">
-            Urban Spheres
+          <h1 className="text-[10px] md:text-xs tracking-[0.2em] md:tracking-[0.6em] font-light uppercase text-white/70 whitespace-nowrap">
+            URBAN SPHERES <span className="text-white/30 lowercase tracking-normal ml-1 whitespace-nowrap">by <a href="https://kirachao.com/" target="_blank" rel="noopener noreferrer" className="hover:text-white/50 transition-colors cursor-pointer pointer-events-auto">Kira Chao</a></span>
           </h1>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="hidden md:flex items-center gap-2 mt-1">
             <Activity size={10} className="text-white/50" />
             <span className="text-[8px] tracking-widest text-white/40 uppercase">A study of urban behavior through time and motion</span>
           </div>
+          <span className="hidden md:inline text-[7px] tracking-[0.3em] text-white/30 uppercase mt-0.5 ml-[18px]">v1.4</span>
         </div>
         <div className="flex items-center gap-6">
           <div className="flex flex-col items-end">
             <button 
-              onClick={() => {
-                const now = new Date();
-                setGlobalTime(now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600);
-                setIsLive(true);
-              }}
+              onClick={handleLiveNow}
               className={`group px-3 py-1.5 -mr-3 rounded-md transition-all duration-300 flex items-center gap-2 mb-0.5 cursor-pointer hover:bg-white/[0.04] active:bg-white/[0.08] ${isLive ? 'text-white' : 'text-white/30 hover:text-white/70'}`}
             >
-              <div className={`w-1 h-1 rounded-full transition-all duration-700 ${isLive ? 'bg-white shadow-[0_0_12px_rgba(255,255,255,1)] animate-pulse' : 'bg-white/10 group-hover:bg-white/30'}`} />
+              <motion.div 
+                className={`w-1 h-1 rounded-full transition-all duration-700 ${isLive ? 'bg-white shadow-[0_0_12px_rgba(255,255,255,1)]' : 'bg-white/10 group-hover:bg-white/30'}`} 
+                animate={isLive ? {
+                  scale: [1, 1.4, 1],
+                  opacity: [0.7, 1, 0.7],
+                } : {}}
+                transition={isLive ? {
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                } : {}}
+              />
               <span className="text-[9px] tracking-[0.2em] uppercase font-medium">LIVE TIME</span>
             </button>
             <span className="text-xs font-mono text-white/50 pr-0.5">{formatTime(globalTime)} UTC</span>
@@ -833,14 +945,14 @@ export default function App() {
       </header>
 
       {/* Split Screen */}
-      <main className="flex-1 flex flex-col lg:flex-row relative">
-        <div className="flex-1 relative border-b lg:border-b-0 lg:border-r border-white/5">
+      <main className="flex-none md:flex-1 flex flex-col md:flex-row relative md:px-6 lg:px-0 md:gap-6 lg:gap-0">
+        <div className="flex-none md:flex-1 relative border-b md:border-b-0 lg:border-r border-white/5">
           <TokyoSystem intensity={tokyoIntensity} localTime={tokyoLocalTime} />
         </div>
-        <div className="flex-1 relative border-b lg:border-b-0 lg:border-r border-white/5">
+        <div className="flex-none md:flex-1 relative border-b md:border-b-0 lg:border-r border-white/5">
           <BerlinSystem intensity={berlinIntensity} localTime={berlinLocalTime} />
         </div>
-        <div className="flex-1 relative">
+        <div className="flex-none md:flex-1 relative pb-32 md:pb-0">
           <SaoPauloSystem intensity={saoPauloIntensity} localTime={saoPauloLocalTime} isLive={isLive} />
         </div>
         
@@ -862,13 +974,18 @@ export default function App() {
               value={globalTime}
               onMouseEnter={() => setIsHovered(true)}
               onMouseLeave={() => setIsHovered(false)}
-              onMouseDown={() => setIsDragging(true)}
+              onMouseDown={() => {
+                setIsDragging(true);
+                cleanup();
+              }}
               onMouseUp={() => setIsDragging(false)}
-              onTouchStart={() => setIsDragging(true)}
+              onTouchStart={() => {
+                setIsDragging(true);
+                cleanup();
+              }}
               onTouchEnd={() => setIsDragging(false)}
               onChange={(e) => {
                 setGlobalTime(parseFloat(e.target.value));
-                setIsLive(false);
               }}
               className="absolute w-full h-full opacity-0 cursor-pointer z-10"
             />
@@ -876,6 +993,9 @@ export default function App() {
               progress={globalTime / 24} 
               isHovered={isHovered} 
               isDragging={isDragging} 
+              isLive={isLive}
+              isTransitioning={isTransitioning}
+              isArrived={isArrived}
             />
           </div>
         </div>
